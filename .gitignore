@@ -1,0 +1,32 @@
+# Build and Release Folders
+cmake-build-debug/
+cmake-build-release/
+bin-debug/
+bin-release/
+[Oo]bj/
+[Bb]in/
+build/
+traffic-sign/
+
+# Other files and folders
+.settings/
+.vscode/
+.idea/
+
+*.pyc
+*.pwf
+*.pt
+*.pb
+*.h5
+*.zip
+*.weights
+
+# Executables
+*.swf
+*.air
+*.ipa
+*.apk
+
+# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
+# should NOT be excluded as they contain compiler settings and other important
+# information for Eclipse / Flash Builder.
