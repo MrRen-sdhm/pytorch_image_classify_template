@@ -2,6 +2,8 @@
 
 use pytorch to do image classfiication tasks 
 
+reference: https://github.com/spytensor/pytorch-image-classification
+
 ```bash
 loading train dataset
 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4572/4572 [00:00<00:00, 1145746.42it/s]
