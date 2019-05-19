@@ -1,4 +1,4 @@
-import os 
+import os
 import random 
 import time
 import json
@@ -19,7 +19,9 @@ from timeit import default_timer as timer
 from models.model import *
 from utils import *
 from IPython import embed
-#1. set random.seed and cudnn performance
+
+
+# set random.seed and cudnn performance
 random.seed(config.seed)
 np.random.seed(config.seed)
 torch.manual_seed(config.seed)
@@ -28,32 +30,44 @@ os.environ["CUDA_VISIBLE_DEVICES"] = config.gpus
 torch.backends.cudnn.benchmark = True
 warnings.filterwarnings('ignore')
 
-#3. test model on public dataset and save the probability matrix
-def test(test_loader,model,folds):
-    #3.1 confirm the model converted to cuda
-    test_labels = open("%s.csv"%config.model_name,"w")
+# test model on public dataset and save the probability matrix
+def test(test_loader, model, folds):
+    correct = 0
+    total = 0
+    # confirm the model converted to cuda
     model.cuda()
     model.eval()
-    tta = False
-    for i,(input,filepath) in enumerate(tqdm(test_loader)):
-        #3.2 change everything to cuda and get only basename
-        filepath = [os.path.basename(x) for x in filepath]
+    for i, (inputs, labels) in enumerate(test_loader):
+        # change everything to cuda
         with torch.no_grad():
-            image_var = Variable(input).cuda()
-            #3.3.output
-            #print(filepath)
-            #print(input,input.shape)
-            if tta == False:
-                y_pred = model(image_var)
-                smax = nn.Softmax(1)
-                smax_out = smax(y_pred)
-                label = np.argmax(smax_out.cpu().data.numpy())
-                test_labels.write(filepath[0]+","+str(label)+"\n")
+            inputs = Variable(inputs).cuda()
+            labels = Variable(labels).cuda()
 
-#4. more details to build main function    
+            # print(inputs, inputs.shape)
+            outputs = model(inputs)
+
+            # Mapping outputs to (0,1), The sum of each row is 1
+            smax = nn.Softmax(1)
+            smax_out = smax(outputs)
+
+            # Return the element with the largest value in each row and it's index
+            _, pred_labels = torch.max(smax_out, 1)
+            # print("pred_label:", pred_labels, "pred:", pred)
+
+            total += labels.size(0)
+            correct += (pred_labels == labels.long()).sum().item()
+
+    accuracy = 100.0 * float(correct) / float(total)
+    print("correct:", correct)
+    print("total:", total)
+    print('Accuracy of the network on the test set: %.3f%%' % (
+        accuracy))
+
+
+# 4. more details to build main function    
 def main():
-    fold = 0
-    #4.1 mkdirs
+    fold = config.fold
+    # mkdirs
     if not os.path.exists(config.submit):
         os.mkdir(config.submit)
     if not os.path.exists(config.weights):
@@ -65,18 +79,28 @@ def main():
     if not os.path.exists(config.weights + config.model_name + os.sep +str(fold) + os.sep):
         os.makedirs(config.weights + config.model_name + os.sep +str(fold) + os.sep)
     if not os.path.exists(config.best_models + config.model_name + os.sep +str(fold) + os.sep):
-        os.makedirs(config.best_models + config.model_name + os.sep +str(fold) + os.sep)       
-    #4.2 get model and optimizer
-    model = get_net()
-    #model = torch.nn.DataParallel(model)
+        os.makedirs(config.best_models + config.model_name + os.sep +str(fold) + os.sep)   
+
+    # 4.2 get model
+    if config.model_name is "lenet":
+        model = get_lenet(config.img_channels)
+    elif config.model_name is "mobilenet":
+        model = get_mobilenet(config.img_channels)
+
+    print(model, "\n")
+    # model = torch.nn.DataParallel(model)
     model.cuda()
-    #4.5 get files and split for K-fold dataset
-    test_files = get_files(config.test_data,"test")
-    #4.5.4 load dataset
-    test_dataloader = DataLoader(ChaojieDataset(test_files,test=True),batch_size=1,shuffle=False,pin_memory=False)
-    best_model = torch.load("checkpoints/best_model/%s/0/model_best.pth.tar"%config.model_name)
+
+    # load dataset
+    with h5py.File(config.test_data, 'r') as db:
+        num_test = db.attrs['size']
+        #  num_test = 20
+        print('test dataset size:', num_test)
+
+    test_dataloader = DataLoader(H5Dataset(config.test_data, 0, num_test), batch_size=20, shuffle=False)
+    best_model = torch.load("checkpoints/best_model/%s/%d/model_best_90.19.pt" % (config.model_name, config.fold))
     model.load_state_dict(best_model["state_dict"])
-    test(test_dataloader,model,fold)
+    test(test_dataloader, model, fold)
 
 if __name__ =="__main__":
     main()

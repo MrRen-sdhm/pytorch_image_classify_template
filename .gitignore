@@ -6,7 +6,7 @@ bin-release/
 [Oo]bj/
 [Bb]in/
 build/
-traffic-sign/
+dataset/traffic-sign/
 
 # Other files and folders
 .settings/
@@ -19,6 +19,7 @@ traffic-sign/
 *.pb
 *.h5
 *.zip
+*.tar
 *.weights
 
 # Executables

@@ -1,9 +1,11 @@
 class DefaultConfigs(object):
+    def __init__(self, model_name):
+        self.model_name = model_name
+
     #1.string parameters
-    train_data = "/home/sdhm/Projects/Pytorch/pytorch-image-classification/traffic-sign/train/"
-    test_data = ""
-    val_data = "/home/sdhm/Projects/Pytorch/pytorch-image-classification/traffic-sign/test/"
-    model_name = "resnet50"
+    train_data = "/home/sdhm/Projects/gpd2/models/new/15channels/1objects/train.h5"
+    test_data = "/home/sdhm/Projects/gpd2/models/new/15channels/1objects/test.h5"
+    val_data = "/home/sdhm/Projects/gpd2/models/new/15channels/1objects/test.h5"
     weights = "./checkpoints/"
     best_models = weights + "best_model/"
     submit = "./submit/"
@@ -11,14 +13,16 @@ class DefaultConfigs(object):
     gpus = "0"
 
     #2.numeric parameters
-    epochs = 40
-    batch_size = 8
-    img_height = 300
-    img_weight = 300
-    num_classes = 62
+    fold = 0
+    epochs = 30
+    batch_size = 64
+    img_height = 60
+    img_weight = 60
+    img_channels = 15
+    num_classes = 2
+    lr = 0.001
+    weight_decay = 0.0005
     seed = 888
-    lr = 1e-4
-    lr_decay = 1e-4
-    weight_decay = 1e-4
 
-config = DefaultConfigs()
+
+config = DefaultConfigs("lenet")

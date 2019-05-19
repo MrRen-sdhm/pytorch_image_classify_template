@@ -1,4 +1,5 @@
 from torch.utils.data import Dataset
+import torch.utils.data as torchdata
 from torchvision import transforms as T 
 from config import config
 from PIL import Image 
@@ -12,6 +13,7 @@ import pandas as pd
 import os 
 import cv2
 import torch 
+import h5py
 
 #1.set random seed
 random.seed(config.seed)
@@ -20,55 +22,24 @@ torch.manual_seed(config.seed)
 torch.cuda.manual_seed_all(config.seed)
 
 #2.define dataset
-class ChaojieDataset(Dataset):
-    def __init__(self,label_list,transforms=None,train=True,test=False):
-        self.test = test 
-        self.train = train 
-        imgs = []
-        if self.test:
-            for index,row in label_list.iterrows():
-                imgs.append((row["filename"]))
-            self.imgs = imgs 
-        else:
-            for index,row in label_list.iterrows():
-                imgs.append((row["filename"],row["label"]))
-            self.imgs = imgs
-        if transforms is None:
-            if self.test or not self.train:
-                self.transforms = T.Compose([
-                    T.Resize((config.img_weight,config.img_height)),
-                    T.ToTensor(),
-                    T.Normalize(mean = [0.485,0.456,0.406],
-                                std = [0.229,0.224,0.225])])
-            else:
-                self.transforms  = T.Compose([
-                    T.Resize((config.img_weight,config.img_height)),
-                    T.RandomRotation(30),
-                    T.RandomHorizontalFlip(),
-                    T.RandomVerticalFlip(),
-                    T.RandomAffine(45),
-                    T.ToTensor(),
-                    T.Normalize(mean = [0.485,0.456,0.406],
-                                std = [0.229,0.224,0.225])])
-        else:
-            self.transforms = transforms
-    def __getitem__(self,index):
-        if self.test:
-            filename = self.imgs[index]
-            #img = cv2.imread(filename)
-            #img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-            img = Image.open(filename)
-            img = self.transforms(img)
-            return img,filename
-        else:
-            filename,label = self.imgs[index] 
-            #img = cv2.imread(filename)
-            #img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-            img = Image.open(filename)
-            img = self.transforms(img)
-            return img,label
+class H5Dataset(torchdata.Dataset):
+    def __init__(self, file_path, start_idx, end_idx):
+        super(H5Dataset, self).__init__()
+        with h5py.File(file_path, 'r') as h5_file:
+            self.data = torch.from_numpy(np.array(h5_file.get('images')[start_idx : end_idx]))
+            self.target = torch.from_numpy(np.array(h5_file.get('labels')[start_idx : end_idx])).to(torch.int32).long()
+        print("Loaded dataset:", file_path)
+
+    def __getitem__(self, index):
+        image = self.data[index,:,:].to(torch.float32) * 1/256.0
+        # Pytorch uses NCHW format
+        image = image.reshape((image.shape[2], image.shape[0], image.shape[1]))    
+        target = self.target[index,:][0]
+        return (image, target)
+
     def __len__(self):
-        return len(self.imgs)
+        return self.data.shape[0]
+
 
 def collate_fn(batch):
     imgs = []

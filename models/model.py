@@ -44,3 +44,80 @@ def get_net():
     model.fc = nn.Linear(2048, config.num_classes)
     return model
 
+
+def get_lenet(input_channels):
+    class LeNet(nn.Module):
+        def __init__(self, input_channels):
+            super(LeNet, self).__init__()
+            self.conv1 = nn.Conv2d(input_channels, 20, 5)
+            self.pool = nn.MaxPool2d(2, 2)
+            self.conv2 = nn.Conv2d(20, 50, 5)
+    #        self.drop2d = nn.Dropout2d(p=0.2)
+            self.fc1 = nn.Linear(50 * 12 * 12, 500)
+    #        self.drop1 = nn.Dropout(p=0.5)
+            self.fc2 = nn.Linear(500, 2)
+
+        def forward(self, x):
+            x = self.pool(F.relu(self.conv1(x)))
+            x = self.pool(F.relu(self.conv2(x)))
+    #        x = self.pool(F.relu(self.drop2d(self.conv2(x))))
+            x = x.view(-1, x.shape[1] * x.shape[2] * x.shape[3])
+            x = F.relu(self.fc1(x))
+    #        x = self.drop1(x)
+            x = self.fc2(x)
+            return x
+
+    net = LeNet(input_channels)
+    return net
+
+
+def get_mobilenet(input_channels):
+    class MobileNet(nn.Module):
+        def __init__(self, input_channels):
+            super(MobileNet, self).__init__()
+
+            def conv_bn(inp, oup, stride):
+                return nn.Sequential(
+                    nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
+                    nn.BatchNorm2d(oup),
+                    nn.ReLU(inplace=True)
+                )
+
+            def conv_dw(inp, oup, stride):
+                return nn.Sequential(
+                    nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
+                    nn.BatchNorm2d(inp),
+                    nn.ReLU(inplace=True),
+        
+                    nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
+                    nn.BatchNorm2d(oup),
+                    nn.ReLU(inplace=True),
+                )
+
+            self.model = nn.Sequential(
+                conv_bn(input_channels, 32, 2), 
+                conv_dw(32,  64, 1),
+                conv_dw(64, 128, 2),
+                conv_dw(128, 128, 1),
+                conv_dw(128, 256, 2),
+                conv_dw(256, 256, 1),
+                conv_dw(256, 512, 2),
+                conv_dw(512, 512, 1),
+                conv_dw(512, 512, 1),
+                conv_dw(512, 512, 1),
+                conv_dw(512, 512, 1),
+                conv_dw(512, 512, 1),
+                conv_dw(512, 1024, 2),
+                conv_dw(1024, 1024, 1),
+                nn.AvgPool2d(2),
+            )
+            self.fc = nn.Linear(1024, 2)
+
+        def forward(self, x):
+            x = self.model(x)
+            x = x.view(-1, 1024)
+            x = self.fc(x)
+            return x
+
+    net = MobileNet(input_channels)
+    return net

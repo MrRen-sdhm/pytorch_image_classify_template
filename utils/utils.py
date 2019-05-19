@@ -4,14 +4,15 @@ import sys
 import os
 from config import config
 
-def save_checkpoint(state, is_best,fold):
-    filename = config.weights + config.model_name + os.sep +str(fold) + os.sep + "_checkpoint.pth.tar"
+def save_checkpoint(state, is_best, fold):
+    filename = config.weights + config.model_name + os.sep + str(fold) + os.sep + "_checkpoint.pt"
     torch.save(state, filename)
     if is_best:
-        message = config.best_models + config.model_name+ os.sep +str(fold)  + os.sep + 'model_best.pth.tar'
-        print("Get Better top1 : %s saving weights to %s"%(state["best_precision1"],message))
-        with open("./logs/%s.txt"%config.model_name,"a") as f:
-            print("Get Better top1 : %s saving weights to %s"%(state["best_precision1"],message),file=f)
+        best_precision1 = state["best_precision1"].cpu().data.numpy()
+        message = config.best_models + config.model_name + os.sep +str(fold)  + os.sep + 'model_best_%.2f.pt' % best_precision1
+        print("Get better val top1[%.2f], save to:%s" % (best_precision1, message))
+        with open("./logs/%s_%d.txt" % (config.model_name, config.fold),"a") as f:
+            print("Get better val top1[%.2f], save to:%s" % (best_precision1, message), file=f)
         shutil.copyfile(filename, message)
 
 class AverageMeter(object):
